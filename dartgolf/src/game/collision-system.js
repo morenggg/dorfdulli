@@ -151,7 +151,7 @@ export function collideWithCircle(ball, circle, restitution) {
  *
  * @param {ReturnType<import('./golf-physics.js').createBall>} ball
  * @param {import('./course-manager.js').PreparedCourse} course
- * @returns {{wallHits:number, hazard:null|{kind:string,name?:string}, holed:boolean}}
+ * @returns {{wallHits:number, hazard:null|{kind:string,name?:string}, holed:boolean, inSand:boolean}}
  */
 export function resolveCollisions(ball, course) {
   let wallHits = 0;
@@ -168,15 +168,24 @@ export function resolveCollisions(ball, course) {
   }
 
   // Gefahrenzonen (Wasser / Aus).
+  // Sand ist keine Strafzone, bremst den Ball aber deutlich stärker ab.
   let hazard = null;
+  let inSand = false;
   for (const hz of course.hazards) {
     const hit = hz.shape === 'circle'
       ? pointInCircle(ball.position, { x: hz.x, y: hz.y, r: hz.r })
       : pointInRect(ball.position, hz);
-    if (hit) {
-      hazard = { kind: hz.kind, name: hz.name };
-      break;
+    if (!hit) continue;
+    if (hz.kind === 'sand') {
+      inSand = true;
+      continue;
     }
+    if (!hazard) hazard = { kind: hz.kind, name: hz.name };
+  }
+  if (inSand && ball.moving) {
+    const sandDamping = (1 - PHYSICS.sandFriction) ** PHYSICS.fixedStep;
+    ball.velocity.x *= sandDamping;
+    ball.velocity.y *= sandDamping;
   }
 
   // Loch: der Ball muss langsam genug sein, sonst rollt er darüber hinweg.
@@ -197,5 +206,5 @@ export function resolveCollisions(ball, course) {
     }
   }
 
-  return { wallHits, hazard, holed };
+  return { wallHits, hazard, holed, inSand };
 }

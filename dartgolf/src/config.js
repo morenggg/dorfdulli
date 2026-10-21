@@ -10,7 +10,7 @@
 
 /** Arbeitstitel – zentral, damit ein späterer Rename nur hier passiert. */
 export const APP_NAME = 'DartGolf';
-export const APP_VERSION = 'Prototype 0.1';
+export const APP_VERSION = 'Prototype 0.2';
 
 /** Prefix für alle localStorage-Schlüssel (verhindert Kollisionen mit der Website). */
 export const STORAGE_PREFIX = 'dartgolf:';
@@ -88,6 +88,8 @@ export const PHYSICS = {
    * Der Ball fällt nur ins Loch, wenn er langsam genug ist – sonst rollt er
    * über die Kante hinweg. Wert in Welt-Einheiten pro Sekunde.
    */
+  /** Zusätzliche Bremswirkung im Sandbunker (zur normalen Rollreibung). */
+  sandFriction: 0.985,
   holeCaptureSpeed: 430,
   /** Sicherheitsabstand, ab dem der Ballmittelpunkt als "im Loch" gilt. */
   holeCaptureFactor: 0.75,

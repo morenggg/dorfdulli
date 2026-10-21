@@ -10,7 +10,7 @@
  *  - fremde Adressen (z. B. eine Autodarts-Quelle) werden nie zwischengespeichert.
  */
 
-const CACHE = 'dartgolf-v2';
+const CACHE = 'dartgolf-v3';
 
 const SHELL = [
   './',
@@ -23,6 +23,7 @@ const SHELL = [
   './src/state.js',
   './src/audio/sound-manager.js',
   './src/game/game-engine.js',
+  './src/game/course-renderer.js',
   './src/game/golf-physics.js',
   './src/game/collision-system.js',
   './src/game/course-manager.js',
@@ -44,6 +45,12 @@ const SHELL = [
   './src/courses/course-01.js',
   './src/courses/course-02.js',
   './src/courses/course-03.js',
+  './src/courses/course-04.js',
+  './src/courses/course-05.js',
+  './src/courses/course-06.js',
+  './src/courses/course-07.js',
+  './src/courses/course-08.js',
+  './src/courses/course-09.js',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
 ];

@@ -7,8 +7,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "landscape",
-  "background_color": "#070b10",
-  "theme_color": "#070b10",
+  "background_color": "#0a1810",
+  "theme_color": "#0a1810",
   "lang": "de",
   "categories": ["games", "sports"],
   "icons": [

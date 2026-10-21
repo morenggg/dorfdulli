@@ -305,7 +305,7 @@ test('Bahnen: alle Layouts sind gültig', () => {
 });
 
 test('Bahnen: es gibt drei Layouts mit den geforderten Par-Werten', () => {
-  assertEqual(COURSES.length, 3);
+  assertEqual(COURSES.length, 9);
   assertEqual(COURSES[0].par, 3);
   assertEqual(COURSES[1].par, 4);
   assertEqual(COURSES[2].par, 4);
@@ -535,7 +535,7 @@ test('Ablauf: jede Bahn ist mit gutem Spiel innerhalb von Par lösbar', () => {
     return { position: { x: ball.position.x, y: ball.position.y }, holed, hazard };
   }
 
-  buildRound(3).forEach((course) => {
+  buildRound(COURSES.length).forEach((course) => {
     let position = { ...course.start };
     let strokes = 0;
     let holed = false;
@@ -569,4 +569,29 @@ test('Ablauf: jede Bahn ist mit gutem Spiel innerhalb von Par lösbar', () => {
     assert(holed, `${course.name}: die Bahn muss lösbar sein`);
     assert(strokes <= course.par, `${course.name}: mit optimalem Spiel sollten höchstens ${course.par} Schläge nötig sein (gebraucht: ${strokes})`);
   });
+});
+
+test('Sand: bremst den Ball stark, kostet aber keinen Strafschlag', () => {
+  const base = {
+    id: 'sandtest', name: 'Sandtest', par: 3, width: 1000, height: 600,
+    start: { x: 100, y: 300 }, hole: { x: 950, y: 60, radius: 22 },
+    polygon: [[0, 0], [1000, 0], [1000, 600], [0, 600]],
+    walls: [], obstacles: [],
+  };
+  function rollDistance(hazards) {
+    const course = prepareCourse({ ...base, hazards });
+    const ball = createBall(base.start);
+    strikeBall(ball, 90, 500);
+    let hazard = null;
+    for (let i = 0; i < 8000 && ball.moving; i += 1) {
+      integrate(ball, PHYSICS.fixedStep);
+      const result = resolveCollisions(ball, course);
+      if (result.hazard) hazard = result.hazard;
+    }
+    return { distance: ball.position.x - base.start.x, hazard };
+  }
+  const free = rollDistance([]);
+  const sand = rollDistance([{ shape: 'rect', kind: 'sand', x: 250, y: 200, w: 200, h: 200 }]);
+  assert(sand.hazard === null, 'Sand darf keine Strafzone sein');
+  assert(sand.distance < free.distance * 0.6, `Sand muss deutlich bremsen (frei ${Math.round(free.distance)}, Sand ${Math.round(sand.distance)})`);
 });

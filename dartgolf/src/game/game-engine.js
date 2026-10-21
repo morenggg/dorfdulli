@@ -15,8 +15,9 @@
 
 import { PHYSICS, TIMING, RULES, CONTROL_MODE } from '../config.js';
 import { TURN_PHASE } from '../state.js';
-import { createBall, placeBall, strikeBall, integrate, speedOf, angleToVector, distanceForPower } from './golf-physics.js';
+import { createBall, placeBall, strikeBall, integrate, speedOf } from './golf-physics.js';
 import { resolveCollisions } from './collision-system.js';
+import { CourseRenderer } from './course-renderer.js';
 import { computeShot } from './shot-mapper.js';
 import { TurnManager, REJECT, REJECT_TEXT } from './turn-manager.js';
 import {
@@ -66,6 +67,12 @@ export class GameEngine {
     /** Spur des Balls für die Darstellung. */
     this._trail = [];
     this._reducedMotion = prefersReducedMotion();
+
+    /** Darstellung der Bahn und kurze Effekte (Spritzer, Sandwolke). */
+    this._renderer = new CourseRenderer();
+    this._effects = [];
+    this._holedAt = null;
+    this._wasInSand = false;
 
     /** Anzeige-Hilfen. */
     this._animationTime = 0;
@@ -124,6 +131,9 @@ export class GameEngine {
     this.course = currentCourse(this.match);
     placeBall(this.ball, this.course.start);
     this._trail.length = 0;
+    this._effects.length = 0;
+    this._holedAt = null;
+    this._wasInSand = false;
     this.pendingShot = null;
     this.lastShot = null;
     this._timer = null;
@@ -220,6 +230,7 @@ export class GameEngine {
 
     strikeBall(this.ball, shot.angleDeg, shot.power);
     this._trail.length = 0;
+    this._wasInSand = false;
     // Restzeit aus dem vorherigen Schlag verwerfen, damit jeder Schlag
     // reproduzierbar mit einem vollen Simulationsschritt beginnt.
     this._accumulator = 0;
@@ -275,6 +286,10 @@ export class GameEngine {
       const result = resolveCollisions(this.ball, this.course);
       wallHits += result.wallHits;
       if (result.hazard && !hazardHit) hazardHit = result.hazard;
+      if (result.inSand && !this._wasInSand) {
+        this._addEffect('puff', this.ball.position);
+      }
+      this._wasInSand = Boolean(result.inSand);
       if (result.holed) { holed = true; break; }
       if (!this.ball.moving) break;
     }
@@ -313,6 +328,7 @@ export class GameEngine {
     this.ball.moving = false;
     this.ball.position.x = this.course.hole.x;
     this.ball.position.y = this.course.hole.y;
+    this._holedAt = this._animationTime;
     this.sound.play('holed');
     this._setPhase(TURN_PHASE.SETTLING);
     this._setTimer(TIMING.settleDelayMs, () => this._afterSettle(true));
@@ -327,6 +343,7 @@ export class GameEngine {
     this.ball.velocity.y = 0;
     this.ball.moving = false;
     this.sound.play('hazard');
+    if (hazard.kind === 'water') this._addEffect('splash', this.ball.position);
 
     const penalty = RULES.hazardPenalty;
     const strokes = addStrokes(this.match, penalty);
@@ -447,250 +464,32 @@ export class GameEngine {
     const { width, height } = this.canvas;
 
     if (!this.course) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, width, height);
       return;
     }
 
     this._resize();
-    const view = this._viewTransform();
-
-    // Hintergrund
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = this.course.theme.background;
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.setTransform(view.scale, 0, 0, view.scale, view.offsetX, view.offsetY);
-
-    this._drawFairway(ctx);
-    this._drawHazards(ctx);
-    this._drawStart(ctx);
-    this._drawHole(ctx);
-    this._drawObstacles(ctx);
-    this._drawTrail(ctx);
-    this._drawAimPreview(ctx);
-    this._drawBall(ctx);
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-  }
-
-  _drawFairway(ctx) {
-    const course = this.course;
-    ctx.save();
-    ctx.beginPath();
-    course.polygon.forEach(([x, y], index) => {
-      if (index === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+    this._renderer.render(ctx, {
+      course: this.course,
+      view: this._viewTransform(),
+      ball: this.ball,
+      phase: this.phase,
+      pendingShot: this.phase === TURN_PHASE.PREVIEW ? this.pendingShot : null,
+      trail: this._trail,
+      effects: this._effects,
+      holedAt: this._holedAt,
+      time: this._animationTime,
+      reducedMotion: this._reducedMotion,
+      playerColor: this._currentPlayerColor(),
     });
-    ctx.closePath();
-
-    const gradient = ctx.createLinearGradient(0, 0, course.width, course.height);
-    gradient.addColorStop(0, course.theme.fairway);
-    gradient.addColorStop(1, course.theme.fairwayEdge);
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = course.theme.accent;
-    ctx.globalAlpha = 0.55;
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.restore();
   }
 
-  _drawHazards(ctx) {
-    for (const hazard of this.course.hazards) {
-      ctx.save();
-      const isWater = hazard.kind === 'water';
-      ctx.fillStyle = isWater ? 'rgba(56,140,220,0.42)' : 'rgba(220,80,60,0.30)';
-      ctx.strokeStyle = isWater ? 'rgba(120,200,255,0.8)' : 'rgba(255,140,110,0.85)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash(isWater ? [] : [14, 10]);
-
-      ctx.beginPath();
-      if (hazard.shape === 'circle') {
-        ctx.arc(hazard.x, hazard.y, hazard.r, 0, Math.PI * 2);
-      } else {
-        ctx.rect(hazard.x, hazard.y, hazard.w, hazard.h);
-      }
-      ctx.fill();
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Wellenlinien als Wasser-Andeutung (statisch bei reduzierter Bewegung).
-      if (isWater && hazard.shape !== 'circle') {
-        ctx.strokeStyle = 'rgba(160,220,255,0.45)';
-        ctx.lineWidth = 2;
-        const phase = this._reducedMotion ? 0 : this._animationTime * 1.4;
-        for (let row = hazard.y + 18; row < hazard.y + hazard.h - 6; row += 22) {
-          ctx.beginPath();
-          for (let x = hazard.x + 6; x <= hazard.x + hazard.w - 6; x += 8) {
-            const y = row + Math.sin((x / 26) + phase) * 3;
-            if (x === hazard.x + 6) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-    }
-  }
-
-  _drawObstacles(ctx) {
-    for (const obstacle of this.course.obstacles || []) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(12,16,22,0.92)';
-      ctx.strokeStyle = this.course.theme.accent;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      if (obstacle.shape === 'circle') {
-        ctx.arc(obstacle.x, obstacle.y, obstacle.r, 0, Math.PI * 2);
-      } else if (obstacle.shape === 'polygon') {
-        obstacle.points.forEach(([x, y], index) => {
-          if (index === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.closePath();
-      } else {
-        const radius = Math.min(10, obstacle.w / 2, obstacle.h / 2);
-        this._roundedRect(ctx, obstacle.x, obstacle.y, obstacle.w, obstacle.h, radius);
-      }
-      ctx.fill();
-      ctx.globalAlpha = 0.8;
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  _roundedRect(ctx, x, y, w, h, r) {
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
-  _drawStart(ctx) {
-    const { start } = this.course;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.setLineDash([6, 8]);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(start.x, start.y, 20, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  _drawHole(ctx) {
-    const { hole, theme } = this.course;
-    ctx.save();
-
-    // Zielmarkierung: dezenter Ring um das Loch.
-    ctx.strokeStyle = theme.accent;
-    ctx.globalAlpha = this._reducedMotion ? 0.4 : 0.3 + 0.18 * Math.sin(this._animationTime * 2.4);
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(hole.x, hole.y, hole.radius + 14, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-
-    // Loch
-    ctx.fillStyle = '#05070a';
-    ctx.beginPath();
-    ctx.arc(hole.x, hole.y, hole.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Fahne
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(hole.x, hole.y - 4);
-    ctx.lineTo(hole.x, hole.y - 62);
-    ctx.stroke();
-    ctx.fillStyle = theme.accent;
-    ctx.beginPath();
-    ctx.moveTo(hole.x, hole.y - 62);
-    ctx.lineTo(hole.x + 30, hole.y - 52);
-    ctx.lineTo(hole.x, hole.y - 42);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  _drawTrail(ctx) {
-    if (this._trail.length < 2) return;
-    ctx.save();
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    for (let i = 1; i < this._trail.length; i += 1) {
-      const alpha = (i / this._trail.length) * 0.35;
-      ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-      ctx.beginPath();
-      ctx.moveTo(this._trail[i - 1].x, this._trail[i - 1].y);
-      ctx.lineTo(this._trail[i].x, this._trail[i].y);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  /** Zeigt Richtung und Stärke des geplanten Schlags. */
-  _drawAimPreview(ctx) {
-    if (this.phase !== TURN_PHASE.PREVIEW || !this.pendingShot) return;
-    const { shot } = this.pendingShot;
-    if (shot.angleDeg === null || shot.power <= 0) return;
-
-    const dir = angleToVector(shot.angleDeg);
-    const length = Math.min(distanceForPower(shot.power), 520);
-    const from = this.ball.position;
-    const to = { x: from.x + dir.x * length, y: from.y + dir.y * length };
-    const color = this._currentPlayerColor();
-
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 5;
-    ctx.setLineDash([16, 12]);
-    ctx.lineDashOffset = this._reducedMotion ? 0 : -this._animationTime * 90;
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Pfeilspitze
-    const head = 22;
-    const left = { x: to.x - dir.x * head + dir.y * head * 0.55, y: to.y - dir.y * head - dir.x * head * 0.55 };
-    const right = { x: to.x - dir.x * head - dir.y * head * 0.55, y: to.y - dir.y * head + dir.x * head * 0.55 };
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(to.x, to.y);
-    ctx.lineTo(left.x, left.y);
-    ctx.lineTo(right.x, right.y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  _drawBall(ctx) {
-    const color = this._currentPlayerColor();
-    const { position, radius } = this.ball;
-    ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = this._reducedMotion ? 0 : 18;
-    ctx.fillStyle = '#f7fbff';
-    ctx.beginPath();
-    ctx.arc(position.x, position.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3.5;
-    ctx.stroke();
-    ctx.restore();
+  /** Merkt einen kurzen Effekt an einer Position vor. */
+  _addEffect(type, position) {
+    if (this._reducedMotion) return;
+    this._effects.push({ type, x: position.x, y: position.y, t: this._animationTime });
+    if (this._effects.length > 8) this._effects.shift();
   }
 
   _currentPlayerColor() {

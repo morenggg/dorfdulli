@@ -35,7 +35,10 @@ Das Spiel kennt keine WebSockets und kein Autodarts. Es kennt nur `DartThrow`.
 **Fertig und geprüft**
 
 * Vollständig spielbar im Testmodus – ohne Dartscheibe, ohne Autodarts.
-* 3 eigenständige Bahnen (Par 3 / 4 / 4), wahlweise 3, 6 oder 9 Bahnen.
+* 9 eigenständige Bahnen (Par 32), wahlweise 3, 6 oder 9 davon.
+* Gefahren: Wasser und Aus (Strafschlag), Sandbunker (bremst stark, kein Strafschlag).
+* Realistische Darstellung: gemähter Rasen, Holzbanden, Teiche, Bunker,
+  Findlinge, wehende Fahne, Bäume rund um die Anlage (`src/game/course-renderer.js`).
 * 1 bis 6 Spieler mit Name, Farbe und Reihenfolge.
 * Eigene 2D-Physik: Rollreibung, Bandenreflexion, Hindernisse, Wasser/Aus,
   Strafschläge, Loch-Erkennung mit Geschwindigkeitsgrenze.
@@ -78,7 +81,8 @@ dartgolf/
     state.js                  Laufzeit-Zustand + localStorage
 
     game/
-      game-engine.js          Loop, Zugablauf, Zeichnen
+      game-engine.js          Loop, Zugablauf
+      course-renderer.js      Zeichnen der Bahn (Rasen, Banden, Wasser, Fahne …)
       golf-physics.js         Vektoren, Bewegung, Reibung, Reflexion
       collision-system.js     Kreis gegen Strecke/Kreis, Gefahren, Loch
       course-manager.js       Bahnen laden, aufbereiten, Runde zusammenstellen
@@ -109,6 +113,7 @@ dartgolf/
       course-01.js            Auftakt (Par 3)
       course-02.js            Bande (Par 4)
       course-03.js            Risiko (Par 4)
+      course-04.js … 09.js    Knick, Seeblick, Insel, Serpentine, Dünen, Finale
 
   tests/                      Testgerüst, Testfälle, Browser-Testseite
   bridge-extension/           Optionaler Fallback (ungetestet)
@@ -347,8 +352,7 @@ Kurzfassung – die ausführliche Bewertung steht in `AUTODARTS-INTEGRATION.md`:
 ## 11. Bekannte Einschränkungen
 
 * Autodarts-Anbindung ungetestet – ohne echte Quelle kommen keine Würfe an.
-* Nur drei Bahnlayouts. Bei 6 oder 9 Bahnen werden sie erneut gespielt
-  (im Bahnnamen als „Durchgang 2/3“ gekennzeichnet).
+* Neun Bahnlayouts. Mehr Bahnen pro Runde gibt es derzeit nicht.
 * Die Klänge sind schlichte, zur Laufzeit erzeugte Töne. Der Ordner
   `assets/audio/` ist leer – es wurden bewusst keine fremden Dateien verwendet.
 * Der Koordinatenmodus ist vollständig umgesetzt, aber nur mit selbst

@@ -105,7 +105,7 @@ export function renderPlayerSetup(onChange) {
     }))),
     el('p', {
       class: 'field-hint',
-      text: 'Es gibt drei eigenständige Layouts. Bei 6 oder 9 Bahnen werden sie erneut gespielt.',
+      text: 'Neun verschiedene Bahnen. Bei 3 oder 6 werden die ersten davon gespielt.',
     }),
   ]);
 

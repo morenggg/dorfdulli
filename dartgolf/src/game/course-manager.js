@@ -30,9 +30,18 @@ import { polygonToSegments, rectToSegments } from './collision-system.js';
 import { course01 } from '../courses/course-01.js';
 import { course02 } from '../courses/course-02.js';
 import { course03 } from '../courses/course-03.js';
+import { course04 } from '../courses/course-04.js';
+import { course05 } from '../courses/course-05.js';
+import { course06 } from '../courses/course-06.js';
+import { course07 } from '../courses/course-07.js';
+import { course08 } from '../courses/course-08.js';
+import { course09 } from '../courses/course-09.js';
 
 /** Alle verfügbaren Bahnlayouts in Spielreihenfolge. */
-export const COURSES = [course01, course02, course03];
+export const COURSES = [
+  course01, course02, course03, course04, course05,
+  course06, course07, course08, course09,
+];
 
 /**
  * Bereitet eine Bahn für die Simulation auf: Polygone und Rechtecke werden
@@ -62,7 +71,7 @@ export function prepareCourse(course) {
   const hazards = (course.hazards || []).map((hz) => ({
     shape: hz.shape || 'rect',
     kind: hz.kind || 'water',
-    name: hz.name || (hz.kind === 'out' ? 'Aus' : 'Wasser'),
+    name: hz.name || ({ out: 'Aus', sand: 'Bunker' }[hz.kind] || 'Wasser'),
     x: hz.x, y: hz.y, w: hz.w, h: hz.h, r: hz.r,
   }));
 
@@ -78,9 +87,8 @@ export function prepareCourse(course) {
 /**
  * Stellt die Bahnfolge für eine Runde zusammen.
  *
- * Es gibt drei eigenständige Layouts. Bei 6 oder 9 Bahnen werden sie erneut
- * gespielt – das wird im Bahnnamen sichtbar gemacht, damit niemand mehr
- * Abwechslung erwartet, als tatsächlich vorhanden ist.
+ * Es gibt neun eigenständige Layouts. Bei mehr Bahnen als Layouts würden sie
+ * erneut gespielt – das wird im Bahnnamen sichtbar gemacht.
  *
  * @param {number} holeCount
  * @returns {PreparedCourse[]}
