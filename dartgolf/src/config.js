@@ -155,6 +155,8 @@ export const DEFAULT_SETTINGS = {
   controlMode: CONTROL_MODE.SIMPLE,
   soundEnabled: true,
   trainingMode: false,
+  /** Empfohlene Würfe als Streifen auf der Bahn zeigen. */
+  showHints: true,
   /** Koordinatensteuerung (Modus B) – nur wirksam, wenn Koordinaten vorliegen. */
   useCoordinates: false,
   autoReconnect: true,

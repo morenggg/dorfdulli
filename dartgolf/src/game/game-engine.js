@@ -18,6 +18,7 @@ import { TURN_PHASE } from '../state.js';
 import { createBall, placeBall, strikeBall, integrate, speedOf } from './golf-physics.js';
 import { resolveCollisions } from './collision-system.js';
 import { CourseRenderer } from './course-renderer.js';
+import { recommendThrows } from './shot-advisor.js';
 import { computeShot } from './shot-mapper.js';
 import { TurnManager, REJECT, REJECT_TEXT } from './turn-manager.js';
 import {
@@ -73,6 +74,8 @@ export class GameEngine {
     this._effects = [];
     this._holedAt = null;
     this._wasInSand = false;
+    /** Empfohlene Würfe für die aktuelle Ballposition. */
+    this._hints = [];
 
     /** Anzeige-Hilfen. */
     this._animationTime = 0;
@@ -482,6 +485,7 @@ export class GameEngine {
       time: this._animationTime,
       reducedMotion: this._reducedMotion,
       playerColor: this._currentPlayerColor(),
+      hints: this.phase === TURN_PHASE.AWAITING_THROW && !this.paused ? this._hints : [],
     });
   }
 
@@ -502,9 +506,27 @@ export class GameEngine {
    * ------------------------------------------------------------------ */
 
   _setPhase(phase) {
+    if (phase === TURN_PHASE.AWAITING_THROW) this._refreshHints();
+    else this._hints = [];
     if (this.phase === phase) return;
     this.phase = phase;
     this._emit('onPhaseChange', phase);
+  }
+
+  /** Rechnet die Wurfempfehlungen für die aktuelle Ballposition neu. */
+  _refreshHints() {
+    this._hints = [];
+    if (!this.match || !this.course) return;
+    const settings = this.match.settings || {};
+    if (settings.showHints === false) return;
+    try {
+      this._hints = recommendThrows(this.course, this.ball.position, {
+        controlMode: settings.controlMode || CONTROL_MODE.SIMPLE,
+        count: 3,
+      });
+    } catch (err) {
+      console.error('[DartGolf] Wurfempfehlung fehlgeschlagen:', err);
+    }
   }
 
   _emit(name, payload) {

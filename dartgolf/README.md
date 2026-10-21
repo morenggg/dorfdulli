@@ -36,6 +36,8 @@ Das Spiel kennt keine WebSockets und kein Autodarts. Es kennt nur `DartThrow`.
 
 * Vollständig spielbar im Testmodus – ohne Dartscheibe, ohne Autodarts.
 * 9 eigenständige Bahnen (Par 32), wahlweise 3, 6 oder 9 davon.
+* Wurfempfehlungen: vor jedem Wurf zeigt die Bahn die drei besten Würfe als
+  gestreiften Laufweg mit Beschriftung (abschaltbar in der Einrichtung).
 * Gefahren: Wasser und Aus (Strafschlag), Sandbunker (bremst stark, kein Strafschlag).
 * Realistische Darstellung: gemähter Rasen, Holzbanden, Teiche, Bunker,
   Findlinge, wehende Fahne, Bäume rund um die Anlage (`src/game/course-renderer.js`).
@@ -83,6 +85,7 @@ dartgolf/
     game/
       game-engine.js          Loop, Zugablauf
       course-renderer.js      Zeichnen der Bahn (Rasen, Banden, Wasser, Fahne …)
+      shot-advisor.js         Wurfempfehlungen (simuliert alle Segmentwürfe)
       golf-physics.js         Vektoren, Bewegung, Reibung, Reflexion
       collision-system.js     Kreis gegen Strecke/Kreis, Gefahren, Loch
       course-manager.js       Bahnen laden, aufbereiten, Runde zusammenstellen

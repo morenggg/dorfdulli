@@ -116,6 +116,7 @@ export class CourseRenderer {
   constructor() {
     this._staticCanvas = null;
     this._staticKey = '';
+    this._stripePattern = null;
   }
 
   /**
@@ -140,6 +141,7 @@ export class CourseRenderer {
     const t = state.reducedMotion ? 0 : state.time;
     this._drawWaterMotion(ctx, course, t);
     this._drawEffects(ctx, state);
+    this._drawHints(ctx, state);
     this._drawTrail(ctx, state.trail);
     this._drawAimPreview(ctx, state);
     this._drawBall(ctx, state);
@@ -842,6 +844,110 @@ export class CourseRenderer {
     ctx.strokeStyle = PALETTE.railDark;
     ctx.lineWidth = 2;
     ctx.strokeRect(rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2);
+    ctx.restore();
+  }
+
+  /* ---------------------------- Empfehlungen --------------------------- */
+
+  /** Kleines Kachelmuster mit schrägen Streifen für die Empfehlungsbahnen. */
+  _getStripePattern(ctx) {
+    if (this._stripePattern) return this._stripePattern;
+    const tile = document.createElement('canvas');
+    tile.width = 16;
+    tile.height = 16;
+    const t = tile.getContext('2d');
+    t.fillStyle = 'rgba(255,255,255,0.10)';
+    t.fillRect(0, 0, 16, 16);
+    t.strokeStyle = 'rgba(255,255,255,0.32)';
+    t.lineWidth = 4;
+    t.beginPath();
+    for (let o = -16; o <= 32; o += 8) {
+      t.moveTo(o, 16);
+      t.lineTo(o + 16, 0);
+    }
+    t.stroke();
+    this._stripePattern = ctx.createPattern(tile, 'repeat');
+    return this._stripePattern;
+  }
+
+  _drawHints(ctx, state) {
+    const hints = state.hints || [];
+    if (hints.length === 0) return;
+    const pattern = this._getStripePattern(ctx);
+
+    ctx.save();
+    polygonPath(ctx, state.course.polygon);
+    ctx.clip();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Vom schwächsten zum besten Vorschlag, damit der beste oben liegt.
+    for (let i = hints.length - 1; i >= 0; i -= 1) {
+      const hint = hints[i];
+      const path = hint.path;
+      if (path.length < 2) continue;
+      const strokePath = () => {
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let k = 1; k < path.length; k += 1) ctx.lineTo(path[k].x, path[k].y);
+      };
+      ctx.globalAlpha = i === 0 ? 1 : 0.55;
+      strokePath();
+      ctx.lineWidth = 20;
+      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+      ctx.stroke();
+      strokePath();
+      ctx.lineWidth = 16;
+      ctx.strokeStyle = pattern;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+
+    // Beschriftungen ohne Clip, damit sie am Rand nicht abgeschnitten werden.
+    const placed = [];
+    hints.forEach((hint, i) => {
+      const label = hint.holed ? `${hint.notation} · Loch` : hint.notation;
+      let { x, y } = hint.end;
+      if (!hint.holed) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      // Etikett oberhalb des Ziels, bei Überschneidung nach unten ausweichen.
+      y -= 30;
+      if (hint.holed) { x -= 44; y += 6; }
+      for (const p of placed) {
+        if (Math.abs(p.x - x) < 70 && Math.abs(p.y - y) < 30) y = p.y + 32;
+      }
+      placed.push({ x, y });
+      this._drawHintLabel(ctx, x, y, label, i === 0);
+    });
+  }
+
+  _drawHintLabel(ctx, x, y, text, best) {
+    ctx.save();
+    ctx.font = '700 17px system-ui, -apple-system, Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width + 20;
+    const h = 26;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    roundedRectPath(ctx, x - w / 2 + 2, y - h / 2 + 3, w, h, 13);
+    ctx.fill();
+    ctx.fillStyle = best ? 'rgba(250,247,236,0.96)' : 'rgba(20,45,22,0.82)';
+    ctx.strokeStyle = best ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    roundedRectPath(ctx, x - w / 2, y - h / 2, w, h, 13);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = best ? '#173a1c' : '#f4f0e3';
+    ctx.fillText(text, x, y + 1);
     ctx.restore();
   }
 

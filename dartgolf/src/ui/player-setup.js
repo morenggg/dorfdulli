@@ -162,6 +162,14 @@ export function renderPlayerSetup(onChange) {
     el('label', { class: 'checkbox-row' }, [
       el('input', {
         type: 'checkbox',
+        checked: draftSettings.showHints !== false,
+        onChange: (event) => { draftSettings.showHints = event.target.checked; },
+      }),
+      'Wurfempfehlungen auf der Bahn zeigen',
+    ]),
+    el('label', { class: 'checkbox-row' }, [
+      el('input', {
+        type: 'checkbox',
         checked: draftSettings.useCoordinates,
         onChange: (event) => { draftSettings.useCoordinates = event.target.checked; },
       }),
