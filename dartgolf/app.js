@@ -439,7 +439,16 @@ function registerServiceWorker() {
   if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js', { scope: './' }).catch((err) => {
+    // Übernimmt eine neue Version die Kontrolle, einmal neu laden – sonst
+    // läuft bis zum nächsten Aufruf noch der alte Code.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    });
+    navigator.serviceWorker.register('sw.js', { scope: './', updateViaCache: 'none' }).catch((err) => {
       console.warn('[DartGolf] Service Worker nicht registriert:', err && err.message);
     });
   });

@@ -10,7 +10,7 @@
  *  - fremde Adressen (z. B. eine Autodarts-Quelle) werden nie zwischengespeichert.
  */
 
-const CACHE = 'dartgolf-v4';
+const CACHE = 'dartgolf-v5';
 
 const SHELL = [
   './',
@@ -60,7 +60,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
       // Einzelne fehlende Dateien dürfen die Installation nicht scheitern lassen.
-      .then((cache) => Promise.allSettled(SHELL.map((url) => cache.add(url))))
+      // cache: 'reload' umgeht den HTTP-Cache, sonst landen beim Update alte
+      // Dateien im neuen Cache.
+      .then((cache) => Promise.allSettled(SHELL.map((url) => cache.add(new Request(url, { cache: 'reload' })))))
       .then(() => self.skipWaiting()),
   );
 });
