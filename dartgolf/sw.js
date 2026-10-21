@@ -10,7 +10,7 @@
  *  - fremde Adressen (z. B. eine Autodarts-Quelle) werden nie zwischengespeichert.
  */
 
-const CACHE = 'dartgolf-v5';
+const CACHE = 'dartgolf-v6';
 
 const SHELL = [
   './',
@@ -18,6 +18,7 @@ const SHELL = [
   './offline.html',
   './styles.css',
   './app.js',
+  './boot.js',
   './manifest.webmanifest',
   './src/config.js',
   './src/state.js',
@@ -108,19 +109,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Dateien: aus dem Cache, im Hintergrund auffrischen.
+  // Dateien: immer zuerst vom Server, der Cache ist nur der Offline-Notnagel.
+  // So kann nie wieder eine alte Fassung hängen bleiben.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    }),
+    fetch(request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request, { ignoreSearch: true })),
   );
 });
