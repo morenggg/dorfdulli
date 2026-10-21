@@ -1,33 +1,53 @@
 {
   "manifest_version": 3,
   "name": "DartGolf Bridge (experimentell)",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Optionaler Fallback: liest Trefferereignisse im eigenen Autodarts-Tab mit und gibt sie an den geöffneten DartGolf-Tab weiter.",
-  "permissions": ["tabs"],
+  "permissions": [
+    "tabs"
+  ],
   "host_permissions": [
     "https://play.autodarts.io/*",
     "https://autodarts.io/*",
-    "https://dorfdulliracing.de/dartgolf/*"
+    "https://dorfdulliracing.de/dartgolf/*",
+    "https://www.dorfdulliracing.de/dartgolf/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://play.autodarts.io/*", "https://autodarts.io/*"],
-      "js": ["content-autodarts.js"],
-      "run_at": "document_start"
+      "matches": [
+        "https://play.autodarts.io/*",
+        "https://autodarts.io/*"
+      ],
+      "js": [
+        "hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
     },
     {
-      "matches": ["https://dorfdulliracing.de/dartgolf/*"],
-      "js": ["content-dartgolf.js"],
-      "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
+      "matches": [
+        "https://play.autodarts.io/*",
+        "https://autodarts.io/*"
+      ],
+      "js": [
+        "content-autodarts.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    },
     {
-      "resources": ["hook.js"],
-      "matches": ["https://play.autodarts.io/*", "https://autodarts.io/*"]
+      "matches": [
+        "https://dorfdulliracing.de/dartgolf/*",
+        "https://www.dorfdulliracing.de/dartgolf/*"
+      ],
+      "js": [
+        "content-dartgolf.js"
+      ],
+      "run_at": "document_idle"
     }
   ]
 }

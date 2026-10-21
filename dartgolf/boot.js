@@ -9,7 +9,7 @@
  * Cache diese Datei abfangen kann.
  */
 (function () {
-  var BUILD = '0.2.2';
+  var BUILD = '0.2.3';
   var KEY = 'dartgolf:build';
   var stored = null;
   try { stored = localStorage.getItem(KEY); } catch (e) { return; }

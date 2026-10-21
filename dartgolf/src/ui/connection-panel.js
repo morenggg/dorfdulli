@@ -137,13 +137,17 @@ function render() {
         transportButton('Bridge', transports.BRIDGE, 'Empfang über eine Erweiterung oder ein Userscript'),
         transportButton('WebSocket', transports.WEBSOCKET, 'Direkte Verbindung zu einer eigenen Adresse'),
       ]),
-      el('p', {
-        class: 'field-hint',
-        text: settings.transport === transports.BRIDGE
-          ? 'Bridge: eine kleine Komponente auf der Autodarts-Seite schickt Treffer an diesen Tab. '
-            + 'Details stehen in AUTODARTS-INTEGRATION.md.'
-          : 'WebSocket: Adresse einer eigenen Quelle. Es wird keine Adresse vorgegeben oder geraten.',
-      }),
+      settings.transport === transports.BRIDGE
+        ? el('p', { class: 'field-hint' }, [
+          'Bridge: eine kleine Browser-Erweiterung liest im Autodarts-Tab mit und schickt Treffer hierher. ',
+          el('a', { href: 'dartgolf-bridge.zip', download: 'dartgolf-bridge.zip', text: 'Erweiterung herunterladen' }),
+          ' (Version 0.2), entpacken und in Chrome oder Edge unter „Erweiterungen“ als entpackte Erweiterung laden. '
+            + 'Danach den Autodarts-Tab einmal neu laden.',
+        ])
+        : el('p', {
+          class: 'field-hint',
+          text: 'WebSocket: Adresse einer eigenen Quelle. Es wird keine Adresse vorgegeben oder geraten.',
+        }),
     ]),
 
     isWebsocket ? el('div', { class: 'field-group' }, [

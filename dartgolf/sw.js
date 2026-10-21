@@ -10,7 +10,7 @@
  *  - fremde Adressen (z. B. eine Autodarts-Quelle) werden nie zwischengespeichert.
  */
 
-const CACHE = 'dartgolf-v6';
+const CACHE = 'dartgolf-v7';
 
 const SHELL = [
   './',

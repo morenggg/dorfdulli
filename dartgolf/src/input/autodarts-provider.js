@@ -228,7 +228,16 @@ export class AutodartsProvider extends BaseDartProvider {
     this.lastMessageAt = Date.now();
 
     if (msg.type === 'status') {
-      this._emitStatus('connected', `Bridge verbunden (${via}).`);
+      const autodarts = msg.payload && msg.payload.autodarts;
+      if (autodarts === 'socket') {
+        this._autodartsSeen = true;
+        this._emitStatus('connected', 'Verbunden – Autodarts-Tab sendet. Warte auf den ersten Dart.');
+      } else if (autodarts) {
+        this._autodartsSeen = true;
+        this._emitStatus('connected', 'Verbunden – Autodarts-Tab gefunden. Dort ein Spiel starten.');
+      } else if (!this._autodartsSeen) {
+        this._emitStatus('connected', 'Erweiterung aktiv – Autodarts-Tab noch nicht gefunden. play.autodarts.io öffnen bzw. neu laden.');
+      }
       this._connected = true;
       return;
     }

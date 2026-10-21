@@ -1,38 +1,23 @@
 /**
- * DartGolf Bridge – Content-Script auf der DartGolf-Seite (EXPERIMENTELL)
- *
- * Nimmt Wurfnachrichten vom Hintergrunddienst entgegen und gibt sie in dem
- * Format an die Seite weiter, das der AutodartsProvider erwartet:
- *
- *   { source: 'dartgolf-bridge', version: 1, type: 'throw'|'status', payload }
- *
- * Der Provider prüft Herkunft (gleiches Fenster, gleicher Origin), Quelle und
- * Protokollversion, bevor er etwas auswertet.
+ * DartGolf Bridge – Inhaltsskript im DartGolf-Tab.
+ * Übergibt Würfe und Statusmeldungen per window.postMessage an die Seite.
  */
-
 const PROTOCOL_VERSION = 1;
 
-/** Meldet der Seite, dass eine Bridge vorhanden ist. */
-function announce() {
-  window.postMessage({
-    source: 'dartgolf-bridge',
-    version: PROTOCOL_VERSION,
-    type: 'status',
-    payload: { bridge: 'extension', ready: true },
-  }, window.location.origin);
+function postToPage(type, payload) {
+  window.postMessage({ source: 'dartgolf-bridge', version: PROTOCOL_VERSION, type, payload }, window.location.origin);
+}
+
+function announce(extra) {
+  postToPage('status', { bridge: 'extension', ready: true, ...(extra || {}) });
 }
 
 chrome.runtime.onMessage.addListener((message) => {
-  if (!message || message.type !== 'dartgolf-throw') return;
-  window.postMessage({
-    source: 'dartgolf-bridge',
-    version: PROTOCOL_VERSION,
-    type: 'throw',
-    payload: message.payload,
-  }, window.location.origin);
+  if (!message) return;
+  if (message.type === 'dartgolf-throw') postToPage('throw', message.payload);
+  else if (message.type === 'dartgolf-autodarts') announce({ autodarts: message.state });
 });
 
-// Fragt die Seite per "hello", meldet sich die Bridge erneut.
 window.addEventListener('message', (event) => {
   if (event.source !== window) return;
   const data = event.data;

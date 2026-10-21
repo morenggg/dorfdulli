@@ -4,7 +4,7 @@ Diese Browser-Erweiterung ist **nicht** Teil des Spiels. Sie ist der in
 `AUTODARTS-INTEGRATION.md` beschriebene Fallback (Zielvariante C) für den Fall,
 dass eine reine Website die Trefferdaten nicht erreichen kann.
 
-**Status: ungetestet.** Sie wurde bisher nicht mit einer echten Autodarts-Sitzung
+**Status: ungetestet mit echter Scheibe.** Version 0.2 setzt den Haken über `"world": "MAIN"` vor dem Laden der Autodarts-Seite (0.1 kam dafür zu spät). Sie wurde bisher nicht mit einer echten Autodarts-Sitzung
 ausgeführt. Ob die Wurfdaten in der beobachteten Form ankommen, ist offen.
 Das Spiel selbst funktioniert vollständig ohne diese Erweiterung.
 
@@ -73,8 +73,9 @@ still verworfen.
 
 ## Installation zum Ausprobieren
 
-1. `chrome://extensions` öffnen, Entwicklermodus einschalten.
-2. „Entpackte Erweiterung laden“ und diesen Ordner wählen.
+0. Fertiges Paket: `dartgolf/dartgolf-bridge.zip` (auch im Verbindungsdialog verlinkt), entpacken.
+1. `chrome://extensions` bzw. `edge://extensions` öffnen, Entwicklermodus einschalten.
+2. „Entpackte Erweiterung laden“ und den entpackten Ordner wählen.
 3. Autodarts-Tab und DartGolf-Tab (`/dartgolf/`) gleichzeitig offen halten.
 4. In DartGolf: „Autodarts verbinden“ → Weg „Bridge“ → „Verbindung starten“.
 

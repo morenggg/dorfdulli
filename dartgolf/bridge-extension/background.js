@@ -1,28 +1,26 @@
 /**
- * DartGolf Bridge – Hintergrunddienst (EXPERIMENTELL)
- *
- * Leitet Wurfnachrichten vom Autodarts-Tab an alle offenen DartGolf-Tabs
- * weiter. Es wird nichts gespeichert und nichts an Dritte gesendet.
+ * DartGolf Bridge – Hintergrunddienst.
+ * Leitet Würfe und den Zustand des Autodarts-Tabs an offene DartGolf-Tabs weiter.
  */
+const DARTGOLF_URLS = [
+  'https://dorfdulliracing.de/dartgolf/*',
+  'https://www.dorfdulliracing.de/dartgolf/*',
+];
 
-const DARTGOLF_URL_PATTERN = 'https://dorfdulliracing.de/dartgolf/*';
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || message.type !== 'dartgolf-throw') return;
-
-  chrome.tabs.query({ url: DARTGOLF_URL_PATTERN }, (tabs) => {
+function forwardToDartGolf(message) {
+  chrome.tabs.query({ url: DARTGOLF_URLS }, (tabs) => {
     for (const tab of tabs) {
       if (typeof tab.id !== 'number') continue;
-      chrome.tabs.sendMessage(tab.id, {
-        type: 'dartgolf-throw',
-        payload: message.payload,
-      }, () => {
-        // Fehler (Tab ohne Content-Script) werden bewusst ignoriert.
-        void chrome.runtime.lastError;
-      });
+      chrome.tabs.sendMessage(tab.id, message, () => { void chrome.runtime.lastError; });
     }
-    sendResponse({ delivered: tabs.length });
   });
+}
 
-  return true; // Antwort erfolgt asynchron
+chrome.runtime.onMessage.addListener((message) => {
+  if (!message) return;
+  if (message.type === 'dartgolf-throw') {
+    forwardToDartGolf({ type: 'dartgolf-throw', payload: message.payload });
+  } else if (message.type === 'dartgolf-autodarts') {
+    forwardToDartGolf({ type: 'dartgolf-autodarts', state: message.state });
+  }
 });
